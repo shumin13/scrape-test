@@ -2,6 +2,8 @@ const express = require('express')
 const request = require('request')
 const cheerio = require('cheerio')
 
+const async = require('async')
+
 const router = express.Router()
 const mongoose = require('mongoose')
 // const Recipe = mongoose.model('Recipe')
@@ -10,6 +12,19 @@ const mongoose = require('mongoose')
 
 module.exports = function (app) {
   app.use('/', router)
+}
+
+function recipeScrape (url, callback){
+  console.log('concal call', url);
+  request(url, function(err, response, body){
+    if (err) return next(err)
+    const $ = cheerio.load(body)
+    console.log('scraping', url)
+    let title = $('.entry-title').text()
+    let vidUrl = $('.embed-container').find('iframe').attr('src')
+    let time = $('.recipe-header').find('li:nth-child(2)').text()
+    callback(null, {title, vidUrl, time})
+    })
 }
 
 router.get('/', function (req, res, next) {
@@ -31,14 +46,23 @@ router.get('/', function (req, res, next) {
 //   })
 // })
 
-    let urls = $('.featured').find('.entry-title > a').map(function (index, article){
-        return $(this).attr('href')
+    let urls = $('.featured').find('.entry-title > a').map(function(){
+      return $(this).attr('href')
       }).get()
-      return res.send({
-        urls
+
+      //get each name, vidUrl and steps, then print the results
+      async.concat(urls, recipeScrape, function(err, results) {
+        if (err) return next(err)
+        console.log(results)
       })
 
+      // return res.send({
+      //   urls
+      // })
 
+
+    })
+  })
 
 
     // let title = $('.entry-title').text()
@@ -64,8 +88,8 @@ router.get('/', function (req, res, next) {
     //   if (err) return next(err)
     //   return res.send(createdRecipe)
     // })
-  })
-})
+//   })
+// })
 
 //     return res.send({
 //       title,
